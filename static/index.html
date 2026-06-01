@@ -67,6 +67,47 @@
     }
     .session-bar button:hover { background: #fdf0f0; }
 
+    /* ── Live-data toggle ────────────────────────────────────────────── */
+    .live-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-left: auto;
+      font-size: 13px;
+      color: #555;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: #ccc;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: #1a6e3c; }
+    .toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+    #live-label { font-weight: 500; min-width: 32px; }
+    #live-label.on  { color: #1a6e3c; }
+    #live-label.off { color: #999; }
+
     /* ── Messages ────────────────────────────────────────────────────── */
     #messages {
       flex: 1;
@@ -184,6 +225,14 @@
   <span>Session:</span>
   <input type="text" id="session-id" value="default" placeholder="session name" />
   <button id="clear-btn" title="Clear conversation history for this session">Clear history</button>
+
+  <div class="live-toggle" title="Toggle real-time Metrolinx API calls on/off">
+    <span id="live-label" class="on">Live</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="live-toggle" checked />
+      <span class="toggle-track"></span>
+    </label>
+  </div>
 </div>
 
 <div id="messages"></div>
@@ -318,6 +367,36 @@
     } else {
       addMsg('No saved history found for this session.', 'status');
     }
+  });
+
+  // ── Live-data toggle ──────────────────────────────────────────────────────
+  const liveToggle = document.getElementById('live-toggle');
+  const liveLabel  = document.getElementById('live-label');
+
+  function applyLiveState(on) {
+    liveLabel.textContent = on ? 'Live' : 'Off';
+    liveLabel.className   = on ? 'on' : 'off';
+    liveToggle.checked    = on;
+  }
+
+  // Sync with server state on load
+  fetch('/config').then(r => r.json()).then(d => applyLiveState(d.live_mode));
+
+  liveToggle.addEventListener('change', async () => {
+    const on = liveToggle.checked;
+    const r = await fetch('/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ live_mode: on }),
+    });
+    const d = await r.json();
+    applyLiveState(d.live_mode);
+    addMsg(
+      d.live_mode
+        ? 'Live data enabled — real-time Metrolinx API active.'
+        : 'Live data disabled — Claude will answer from general knowledge only.',
+      'status'
+    );
   });
 </script>
 </body>

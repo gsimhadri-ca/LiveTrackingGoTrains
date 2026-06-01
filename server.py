@@ -5,6 +5,8 @@ Endpoints:
   GET  /           → serve chat UI (static/index.html)
   POST /chat       → SSE stream: agent events as JSON lines
   GET  /health     → liveness check
+  GET  /config     → get live_mode state
+  POST /config     → set live_mode state
   DELETE /history/{session_id} → clear a session's conversation history
 
 Run:
@@ -18,6 +20,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
 from agent.agent import chat_stream, clear_history
+from agent import live_mode
 from config import WEB_HOST, WEB_PORT
 
 app = FastAPI(title="GO Transit Chat Agent", version="2.0")
@@ -30,6 +33,10 @@ _STATIC = Path(__file__).parent / "static" / "index.html"
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
+
+
+class ConfigRequest(BaseModel):
+    live_mode: bool
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -66,6 +73,17 @@ async def chat_endpoint(req: ChatRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.get("/config")
+async def get_config():
+    return {"live_mode": live_mode.enabled}
+
+
+@app.post("/config")
+async def set_config(req: ConfigRequest):
+    live_mode.enabled = req.live_mode
+    return {"live_mode": live_mode.enabled}
 
 
 @app.delete("/history/{session_id}")

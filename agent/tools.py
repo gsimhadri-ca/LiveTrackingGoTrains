@@ -1,6 +1,12 @@
 """LangChain tools wrapping live Metrolinx APIs."""
 import httpx
 from langchain_core.tools import tool
+from agent import live_mode
+
+_DISABLED_MSG = (
+    "Live data is currently disabled. "
+    "Turn on the 'Live Data' toggle in the UI to fetch real-time information."
+)
 
 from ingestor.fetcher import fetch_trip_updates
 from orchestrator.filter import (
@@ -25,6 +31,8 @@ async def check_lakeshore_west_delays() -> str:
     Returns a sorted summary of delayed trains. Call this whenever the user asks
     about delays, train status, or whether trains are on time.
     """
+    if not live_mode.enabled:
+        return _DISABLED_MSG
     async with httpx.AsyncClient() as client:
         trips = await fetch_trip_updates(client)
 
@@ -73,6 +81,8 @@ async def get_oakville_station_info() -> str:
     wheelchair-accessible trains, ticket sales hours. Call this when the user asks
     about Oakville GO facilities or accessibility.
     """
+    if not live_mode.enabled:
+        return _DISABLED_MSG
     async with httpx.AsyncClient() as client:
         info = await _get_oakville_facilities(client)
 
@@ -100,6 +110,8 @@ async def get_next_service(stop_code: str = "OA") -> str:
     BR (Brampton GO), CO (Cooksville GO). Call this when the user asks about
     next trains, departure times, or the schedule.
     """
+    if not live_mode.enabled:
+        return _DISABLED_MSG
     url = GO_API_NEXT_SERVICE_URL.format(stop_code=stop_code)
     try:
         async with httpx.AsyncClient() as client:
@@ -143,6 +155,8 @@ async def get_service_exceptions() -> str:
     Get current GO Transit train cancellations, delays, or service exceptions.
     Call this when the user asks about cancellations, service alerts, or disruptions.
     """
+    if not live_mode.enabled:
+        return _DISABLED_MSG
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
