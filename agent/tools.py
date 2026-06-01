@@ -109,7 +109,12 @@ async def get_next_service(stop_code: str = "OA") -> str:
     except Exception as exc:
         return f"Could not fetch next service for stop {stop_code}: {exc}"
 
-    next_service = data.get("NextService", {})
+    next_service = data.get("NextService") or {}
+    if not next_service:
+        meta = data.get("Metadata", {})
+        msg = meta.get("ErrorMessage", "No upcoming service found.")
+        return f"No upcoming GO service from {stop_code}: {msg}"
+
     lines = [f"Next GO service from {stop_code}:"]
 
     for direction in ("Inbound", "Outbound"):
