@@ -1,7 +1,7 @@
 # LiveTrackingGoTrains — Implementation Progress
 
 **Last updated:** 2026-06-01  
-**Status:** Phase 2 complete and operational. `ANTHROPIC_API_KEY` set in `.env`.
+**Status:** Phase 2 complete. Phase 3 in progress — Redis persistent state done. `ANTHROPIC_API_KEY` set in `.env`.
 
 ---
 
@@ -231,7 +231,7 @@ _ENABLED_CHANNELS = [
 | Email / WhatsApp notifier | 2 | Channel hooks are ready — just needs implementation |
 | `NextService/OA` wired to Phase 1 alerts | 2 | Tool exists; not yet in alert message |
 | Vultr server deployment | 3 | No server configured yet; local only |
-| Persistent state (Redis/DB) | 3 | Currently in-memory — resets on server restart |
+| Persistent state (Redis/DB) | 3 | **DONE (2026-06-01)** — Redis-backed `orchestrator/state.py`; keys TTL 1hr; `REDIS_URL` in config |
 | Kafka integration | 3 | For high-throughput / multi-user scaling |
 
 ---
@@ -253,6 +253,9 @@ langchain-community>=0.3
 anthropic>=0.40
 fastapi>=0.115
 uvicorn[standard]>=0.30
+
+# Phase 3
+redis>=5.0
 ```
 
 > **Note:** Uses an isolated `venv/` — do not use the global Python environment,

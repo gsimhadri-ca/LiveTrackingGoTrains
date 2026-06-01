@@ -51,5 +51,8 @@ AGENT_MODEL: str = os.getenv("AGENT_MODEL", "claude-sonnet-4-6")
 WEB_HOST: str = os.getenv("WEB_HOST", "127.0.0.1")
 WEB_PORT: int = int(os.getenv("WEB_PORT", "8000"))
 
+# ── Redis (Phase 3 — persistent state) ───────────────────────────────────────
+REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
