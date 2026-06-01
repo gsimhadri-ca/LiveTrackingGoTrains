@@ -1,7 +1,7 @@
 # LiveTrackingGoTrains — Implementation Progress
 
-**Last updated:** 2026-05-31  
-**Status:** Phase 2 built (agent + chat UI). Needs `ANTHROPIC_API_KEY` in `.env` to activate.
+**Last updated:** 2026-06-01  
+**Status:** Phase 2 complete and operational. `ANTHROPIC_API_KEY` set in `.env`.
 
 ---
 
@@ -146,8 +146,31 @@ Natural language answer → SSE → browser
 | `GET` | `/` | Chat UI |
 | `POST` | `/chat` | SSE agent stream |
 | `GET` | `/health` | Liveness check |
+| `GET` | `/config` | Get `live_mode` state |
+| `POST` | `/config` | Set `live_mode` state `{"live_mode": true\|false}` |
 | `DELETE` | `/history/{id}` | Clear session history |
 | `GET` | `/docs` | Auto-generated API docs |
+
+### Live-data toggle (2026-06-01)
+The chat UI has a **Live / Off** toggle switch (top-right of session bar).
+
+| Toggle | Behaviour |
+|---|---|
+| **Live ON** (default) | All 4 tools call Metrolinx APIs for real-time data |
+| **Live OFF** | Tools return a "disabled" message instantly; Claude answers from general knowledge only |
+
+**What still works with Live OFF:** chat UI, conversation history, general GO Transit questions from Claude's training.  
+**What stops:** real-time delays, next trains, service exceptions, station facilities.  
+**Flag lives in-process** (`agent/live_mode.py`) — resets to ON on server restart.
+
+- `agent/live_mode.py` — single `enabled: bool = True` flag imported by all tools
+- Each `@tool` checks `live_mode.enabled` at entry before making any API call
+- UI syncs with `GET /config` on page load; posts `{"live_mode": ...}` to `POST /config` on toggle
+
+### Known API quirks (2026-06-01)
+- `GET /Stop/NextService/{stop_code}` returns `{"NextService": null}` (not `{}`) when no service
+  is scheduled (e.g. overnight). `data.get("NextService", {})` returns `None` in this case —
+  fixed with `data.get("NextService") or {}` + early return using the `Metadata.ErrorMessage`.
 
 ---
 
