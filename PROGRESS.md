@@ -1,13 +1,22 @@
 # LiveTrackingGoTrains — Implementation Progress
 
 **Last updated:** 2026-05-31  
-**Status:** Phase 1 complete. Phase 2 in planning — LangChain agent + chat UI.
+**Status:** Phase 2 built (agent + chat UI). Needs `ANTHROPIC_API_KEY` in `.env` to activate.
 
 ---
 
-## What Is Built
+## Repository
 
-### Folder Structure
+| Branch | Purpose |
+|---|---|
+| `main` | Active development |
+| `production` | Stable / deployable snapshot |
+
+**GitHub:** https://github.com/gsimhadri-ca/LiveTrackingGoTrains
+
+---
+
+## Folder Structure
 
 ```
 LiveTrackingGoTrains/
@@ -22,12 +31,19 @@ LiveTrackingGoTrains/
 │   └── notifier.py        # Alert dispatcher (structured log output; pluggable channels)
 ├── go_api/
 │   └── client.py          # GO Transit REST API client (station/facility metadata)
+├── agent/                 # ← Phase 2
+│   ├── tools.py           # 4 async LangChain @tool functions wrapping Metrolinx APIs
+│   └── agent.py           # LangGraph create_agent + JSON file history per session
+├── static/
+│   └── index.html         # Chat UI — GO green theme, suggestion chips, SSE streaming
+├── data/                  # Gitignored session history files (history_{id}.json)
 ├── config.py              # Central config — all env vars loaded here
-├── main.py                # Entry point — async poll loop (Ctrl+C to stop)
+├── main.py                # Phase 1 entry point — async poll loop (Ctrl+C to stop)
+├── server.py              # Phase 2 entry point — FastAPI chat server
 ├── show_delays.py         # One-shot CLI snapshot: all LW trains sorted by delay
 ├── test_feeds.py          # Integration test — validates all components against live API
 ├── requirements.txt       # Python dependencies
-├── .env                   # Your API key + settings (gitignored)
+├── .env                   # Your API keys + settings (gitignored)
 ├── .env.example           # Template for .env
 ├── .gitignore
 └── venv/                  # Isolated Python virtual environment
@@ -37,16 +53,22 @@ LiveTrackingGoTrains/
 
 ## How to Run
 
-### Start the poll loop
+### Phase 1 — poll loop (no LLM needed)
 ```bash
 cd D:\Workspace\python_ws\LiveTrackingGoTrains
 venv\Scripts\python main.py
 ```
-Polls every 30 seconds. Press `Ctrl+C` to stop.
 
-### Run the integration test (one-shot, no loop)
+### Phase 1 — one-shot delay snapshot
 ```bash
-venv\Scripts\python test_feeds.py
+venv\Scripts\python show_delays.py
+```
+
+### Phase 2 — chat server
+```bash
+# 1. Add ANTHROPIC_API_KEY to .env first
+venv\Scripts\python -m uvicorn server:app --reload --host 127.0.0.1 --port 8000
+# Then open http://127.0.0.1:8000
 ```
 
 ---
@@ -55,10 +77,14 @@ venv\Scripts\python test_feeds.py
 
 | Variable | Default | Description |
 |---|---|---|
-| `METROLINX_API_KEY` | *(required)* | Your Metrolinx Open Data API key |
-| `POLL_INTERVAL_SECONDS` | `30` | How often to poll the feeds |
-| `DELAY_THRESHOLD_SECONDS` | `300` | Alert fires when delay ≥ this value AND worsening |
-| `LOG_LEVEL` | `INFO` | `DEBUG` shows per-trip delay updates every cycle |
+| `METROLINX_API_KEY` | *(required)* | Metrolinx Open Data API key |
+| `ANTHROPIC_API_KEY` | *(required for Phase 2)* | Anthropic API key (platform.anthropic.com) |
+| `AGENT_MODEL` | `claude-sonnet-4-6` | Claude model for the agent |
+| `WEB_HOST` | `127.0.0.1` | FastAPI bind host |
+| `WEB_PORT` | `8000` | FastAPI bind port |
+| `POLL_INTERVAL_SECONDS` | `30` | Phase 1 poll interval |
+| `DELAY_THRESHOLD_SECONDS` | `300` | Phase 1 alert threshold (seconds) |
+| `LOG_LEVEL` | `INFO` | `DEBUG` shows per-trip delay updates |
 
 ---
 
@@ -72,8 +98,8 @@ Auth: `?key=YOUR_API_KEY` query parameter on every request.
 | `GET /Gtfs.proto/feed/tripUpdates` | Protobuf binary | Real-time trip delays for all GO lines |
 | `GET /Gtfs/Feed/VehiclePosition` | JSON | Real-time vehicle GPS positions |
 | `GET /Stop/Details/{StopCode}` | JSON | Station metadata (facilities, hours) |
-| `GET /Stop/NextService/{StopCode}` | JSON | Next departures from a station *(not yet wired)* |
-| `GET /ServiceUpdate/Exceptions/Train` | JSON | Train cancellations / exceptions *(not yet wired)* |
+| `GET /Stop/NextService/{StopCode}` | JSON | Next departures from a station |
+| `GET /ServiceUpdate/Exceptions/Train` | JSON | Train cancellations / exceptions |
 
 ### Key values discovered from live data (not in docs)
 | Fact | Value |
@@ -85,7 +111,47 @@ Auth: `?key=YOUR_API_KEY` query parameter on every request.
 
 ---
 
-## Data Flow
+## Phase 2 — LangChain Agent + Chat UI
+
+### Architecture
+
+```
+Browser (http://127.0.0.1:8000)
+      │  POST /chat  {message, session_id}
+      ▼
+FastAPI server.py
+      │
+      ▼  SSE stream — events: {type: "status"|"answer"|"error", text: "..."}
+LangGraph Agent (agent/agent.py)
+  ├── Tool: check_lakeshore_west_delays()  → ingestor + filter (live GTFS-RT)
+  ├── Tool: get_oakville_station_info()    → go_api/client.py
+  ├── Tool: get_next_service(stop_code)    → NextService endpoint
+  └── Tool: get_service_exceptions()       → Exceptions/Train endpoint
+      │
+      ▼
+Claude (claude-sonnet-4-6)
+      │
+      ▼
+Natural language answer → SSE → browser
+```
+
+### Session history
+- Stored in `data/history_{session_id}.json` (gitignored)
+- Persists across server restarts
+- Clear via UI button → `DELETE /history/{session_id}`
+
+### FastAPI routes
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | Chat UI |
+| `POST` | `/chat` | SSE agent stream |
+| `GET` | `/health` | Liveness check |
+| `DELETE` | `/history/{id}` | Clear session history |
+| `GET` | `/docs` | Auto-generated API docs |
+
+---
+
+## Data Flow (Phase 1)
 
 ```
 Metrolinx GTFS-RT feeds
@@ -106,71 +172,32 @@ Metrolinx GTFS-RT feeds
         │                                    falls back to first stop with data
         │
         ├─ state.update_delay(trip_id, delay)
-        │     Computes delta vs last poll:
-        │       delta > +30s  → WORSENING
-        │       delta < -30s  → RECOVERING
-        │       otherwise     → STABLE
+        │     delta > +30s  → WORSENING
+        │     delta < -30s  → RECOVERING
+        │     otherwise     → STABLE
         │
         └─ if delay ≥ threshold AND trend == WORSENING:
                dispatch_alert() → notifier
         │
         ▼
 [notifier/notifier.py]
-  - Builds human-readable alert message
-  - Dispatches to all enabled channels
-  - Currently: structured log (WARNING level)
-  - Future: email, WhatsApp, SMS, dashboard
-        │
-        ▼
-[go_api/client.py]  ← called once at startup
-  - get_oakville_facilities()
-    Returns: has_elevator, has_reserved_parking, has_wheelchair_train,
-             ticket_sales_hours, all facility codes
-  Note: Metrolinx REST API provides static facility metadata only —
-        real-time elevator status / parking fill % are not available.
-```
-
----
-
-## What the Alert Looks Like
-
-When a Lakeshore West train's delay grows past 5 minutes and is still worsening, the log emits:
-
-```
-[warning] DELAY_ALERT
-  trip_id=20260422-LW-1988
-  route_id=01260426-LW
-  current_delay=+3m 14s
-  delta=+1m 29s
-  trend=WORSENING
-  message="GO Train 20260422-LW-1988 (Route 01260426-LW) is now +3m 14s late
-           and WORSENING (grew by +1m 29s since last poll).
-           Expected delay at Oakville GO: +3m 14s."
+  Structured log (WARNING level) — pluggable channels ready
 ```
 
 ---
 
 ## Notifier Architecture (Pluggable)
 
-[notifier/notifier.py](notifier/notifier.py) is designed for easy extension:
-
 ```python
 # To add a new notification channel:
-# 1. Implement a function:
 def _my_channel(alert: dict) -> None:
     ...  # alert has: trip_id, route_id, current_delay_human, delta_human, trend, message
 
-# 2. Add it to the list at the bottom of notifier.py:
 _ENABLED_CHANNELS = [
     _log_alert,
     _my_channel,   # ← add here
 ]
 ```
-
-### Channels planned (not yet implemented)
-- **Email (Gmail SMTP)** — simplest next step, needs `ALERT_FROM_EMAIL`, `ALERT_FROM_APP_PASSWORD`, `ALERT_TO_EMAIL` in `.env`
-- **WhatsApp** — reuse existing WhatsApp bot infrastructure
-- **Dashboard WebSocket** — push to a browser frontend
 
 ---
 
@@ -179,95 +206,30 @@ _ENABLED_CHANNELS = [
 | Feature | Phase | Notes |
 |---|---|---|
 | Email / WhatsApp notifier | 2 | Channel hooks are ready — just needs implementation |
-| `NextService/OA` integration | 2 | Would show upcoming Oakville departures alongside delay info |
-| `ServiceUpdate/Exceptions/Train` | 2 | Would catch full cancellations (delay = 0 but trip cancelled) |
-| User registration / subscription | 2 | Login, preferred trains, alert schedule (days/hours) |
-| LangChain agent + tools | 2 | Natural language commute assistant — see Phase 2 plan below |
-| Chat UI (FastAPI + HTML) | 2 | Browser chat interface backed by the LangChain agent |
-| Persistent state (Redis/DB) | 2 | Currently in-memory — state resets on restart |
+| `NextService/OA` wired to Phase 1 alerts | 2 | Tool exists; not yet in alert message |
+| Vultr server deployment | 3 | No server configured yet; local only |
+| Persistent state (Redis/DB) | 3 | Currently in-memory — resets on server restart |
 | Kafka integration | 3 | For high-throughput / multi-user scaling |
-
----
-
-## Phase 2 Plan — LangChain Agent + Chat UI
-
-### Goal
-Replace the CLI-only `show_delays.py` and bare log alerts with a **conversational AI agent** that answers natural language questions about the user's commute using live Metrolinx data.
-
-### Architecture
-```
-Browser (chat UI)
-      │  POST /chat  { message }
-      ▼
-FastAPI  ──────────────────────────────────────────────
-      │
-      ▼
-LangChain ReAct Agent
-  ├── Tool: check_lakeshore_west_delays()   → calls ingestor + filter (live data)
-  ├── Tool: get_oakville_facilities()        → calls go_api/client.py
-  ├── Tool: get_next_service(stop_code)      → calls NextService endpoint
-  └── Tool: get_service_exceptions()         → calls Exceptions/Train endpoint
-      │
-      ▼
-LLM (Claude claude-sonnet-4-6 or GPT-4o)
-      │
-      ▼
-Natural language answer streamed back to browser
-```
-
-### What LangChain Concepts This Teaches
-| Concept | Where used |
-|---|---|
-| `@tool` decorator | Wrapping each Metrolinx API call as a callable tool |
-| ReAct agent | Agent decides which tools to call based on user question |
-| Chat message history | Agent remembers "my usual train is 8:15 Oakville→Union" |
-| Prompt templates | System prompt with commuter context + tool descriptions |
-| Streaming output | LLM tokens stream to browser as they arrive |
-| Output parsers | Structured delay summaries from raw tool results |
-
-### Example interactions
-```
-User: "Is the 8:15 Oakville train on time?"
-Agent: [calls check_lakeshore_west_delays] → "Yes, train 20260531-LW-1234
-       is currently on time. Next departure from Oakville GO is at 8:17."
-
-User: "Any delays over 5 minutes?"
-Agent: [calls check_lakeshore_west_delays] → "Two trains are significantly
-       delayed: LW-1988 (+12m, worsening) and LW-2041 (+7m, recovering)."
-
-User: "Is the elevator working at Oakville?"
-Agent: [calls get_oakville_facilities] → "Yes, elevator is operational.
-       Reserved parking is available."
-```
-
-### Stack additions
-```
-langchain>=0.3
-langchain-anthropic          # or langchain-openai
-fastapi
-uvicorn
-```
-
-### Open questions before starting
-1. Which LLM? Claude (Anthropic key) or GPT-4o (OpenAI key)?
-2. Chat UI: minimal plain HTML auto-refresh, or something richer?
-3. Conversation memory scope: per browser session, or persistent per user?
 
 ---
 
 ## Dependencies
 
 ```
-gtfs-realtime-bindings==1.0.0   # Protobuf GTFS-RT message definitions
-protobuf>=4.21,<5.0             # Protobuf runtime (pinned to avoid conflicts)
-httpx>=0.27                     # Async HTTP client
-structlog>=24.1                 # Structured logging
-python-dotenv>=1.0              # .env loading
-```
+# Phase 1
+gtfs-realtime-bindings==1.0.0
+protobuf>=4.21,<5.0
+httpx>=0.27
+structlog>=24.1
+python-dotenv>=1.0
 
-Install into the project venv:
-```bash
-venv\Scripts\pip install -r requirements.txt
+# Phase 2
+langchain>=0.3          # LangGraph-based agent framework
+langchain-anthropic>=0.3
+langchain-community>=0.3
+anthropic>=0.40
+fastapi>=0.115
+uvicorn[standard]>=0.30
 ```
 
 > **Note:** Uses an isolated `venv/` — do not use the global Python environment,
