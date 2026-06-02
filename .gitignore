@@ -5,3 +5,4 @@ __pycache__/
 *.pb
 feed_dump/
 data/*.json
+logs/

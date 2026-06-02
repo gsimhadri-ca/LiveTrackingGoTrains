@@ -1,7 +1,7 @@
 # LiveTrackingGoTrains — Implementation Progress
 
-**Last updated:** 2026-06-01  
-**Status:** Phase 3 in progress — Redis, Kafka, subscriptions done. Agent disabled (`AGENT_ENABLED=false`). Set `AGENT_ENABLED=true` to re-enable Claude chat.
+**Last updated:** 2026-06-02  
+**Status:** Phase 3 in progress — Redis, Kafka, subscriptions, and live end-to-end test all complete. Agent disabled (`AGENT_ENABLED=false`). Set `AGENT_ENABLED=true` to re-enable Claude chat. WhatsApp channel remaining before Vultr deploy.
 
 ---
 
