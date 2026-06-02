@@ -1,7 +1,7 @@
 # LiveTrackingGoTrains — Implementation Progress
 
 **Last updated:** 2026-06-01  
-**Status:** Phase 2 complete. Phase 3 in progress — Redis state + Kafka streaming done. `ANTHROPIC_API_KEY` set in `.env`.
+**Status:** Phase 3 in progress — Redis, Kafka, subscriptions done. Agent disabled (`AGENT_ENABLED=false`). Set `AGENT_ENABLED=true` to re-enable Claude chat.
 
 ---
 
@@ -228,7 +228,7 @@ _ENABLED_CHANNELS = [
 
 | Feature | Phase | Notes |
 |---|---|---|
-| Email / WhatsApp notifier | 2 | Channel hooks are ready — just needs implementation |
+| Email / WhatsApp notifier | 2 | **DONE (2026-06-01)** — `subscriptions/notifier.py`; SMTP if configured, log-only in dev |
 | `NextService/OA` wired to Phase 1 alerts | 2 | Tool exists; not yet in alert message |
 | Vultr server deployment | 3 | No server configured yet; local only |
 | Persistent state (Redis/DB) | 3 | **DONE (2026-06-01)** — Redis-backed `orchestrator/state.py`; keys TTL 1hr; `REDIS_URL` in config |

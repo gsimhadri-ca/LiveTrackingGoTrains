@@ -108,6 +108,73 @@
     #live-label.on  { color: #1a6e3c; }
     #live-label.off { color: #999; }
 
+    /* ── Subscribe panel ─────────────────────────────────────────────── */
+    #sub-toggle-bar {
+      background: #eaf3ec;
+      border-bottom: 1px solid #c3e0ca;
+      padding: 7px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #1a6e3c;
+      font-weight: 600;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    #sub-toggle-bar:hover { background: #d9eede; }
+    #sub-arrow { transition: transform 0.2s; font-style: normal; }
+    #sub-arrow.open { transform: rotate(90deg); }
+
+    #sub-panel {
+      display: none;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 16px 20px;
+      flex-shrink: 0;
+    }
+    #sub-panel.open { display: block; }
+    #sub-panel h3 { font-size: 14px; color: #333; margin-bottom: 12px; }
+    .sub-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+    .sub-form label { font-size: 13px; color: #555; margin-bottom: 2px; display: block; }
+    .sub-form input, .sub-form select {
+      width: 100%; padding: 6px 10px; border: 1px solid #ccc;
+      border-radius: 5px; font-size: 13px;
+    }
+    .sub-form input:focus, .sub-form select:focus { border-color: #1a6e3c; outline: none; }
+    .sub-form .full-row { grid-column: 1 / -1; }
+    .day-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .day-chip {
+      padding: 4px 10px; border: 1px solid #ccc; border-radius: 12px;
+      font-size: 12px; cursor: pointer; color: #555; background: #fff;
+      transition: all 0.15s;
+    }
+    .day-chip.selected { background: #1a6e3c; color: #fff; border-color: #1a6e3c; }
+    .sub-actions { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+    #sub-submit {
+      background: #1a6e3c; color: #fff; border: none; border-radius: 6px;
+      padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    #sub-submit:hover { background: #155c31; }
+    #sub-msg { font-size: 13px; color: #1a6e3c; }
+    #sub-msg.error { color: #c0392b; }
+
+    #subs-list { margin-top: 16px; }
+    #subs-list h4 { font-size: 13px; color: #555; margin-bottom: 8px; }
+    .sub-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #f9f9f9; border: 1px solid #e8e8e8; border-radius: 6px;
+      padding: 8px 12px; margin-bottom: 6px; font-size: 13px;
+    }
+    .sub-item .sub-info { color: #333; }
+    .sub-item .sub-meta { font-size: 12px; color: #888; margin-top: 2px; }
+    .sub-delete {
+      background: none; border: 1px solid #e08080; color: #c0392b;
+      border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer;
+    }
+    .sub-delete:hover { background: #fdf0f0; }
+
     /* ── Messages ────────────────────────────────────────────────────── */
     #messages {
       flex: 1;
@@ -233,6 +300,57 @@
       <span class="toggle-track"></span>
     </label>
   </div>
+</div>
+
+<!-- ── Subscribe panel ──────────────────────────────────────────────────── -->
+<div id="sub-toggle-bar" onclick="toggleSubPanel()">
+  <i id="sub-arrow">▶</i>
+  Subscribe to Delay Alerts
+</div>
+
+<div id="sub-panel">
+  <h3>Get notified when your train is delayed</h3>
+  <div class="sub-form">
+    <div>
+      <label for="sub-email">Email address</label>
+      <input type="email" id="sub-email" placeholder="you@example.com" />
+    </div>
+    <div>
+      <label for="sub-delay">Alert me when delay is at least</label>
+      <select id="sub-delay">
+        <option value="5">5 minutes</option>
+        <option value="10">10 minutes</option>
+        <option value="15">15 minutes</option>
+        <option value="20">20 minutes</option>
+      </select>
+    </div>
+    <div class="full-row">
+      <label>Hours (when to notify)</label>
+      <div class="day-chips" id="hour-chips">
+        <span class="day-chip selected" data-hours="6,7,8,9">Morning rush (6–9am)</span>
+        <span class="day-chip selected" data-hours="16,17,18,19">Evening rush (4–7pm)</span>
+        <span class="day-chip" data-hours="">All day</span>
+      </div>
+    </div>
+    <div class="full-row">
+      <label>Days (when to notify)</label>
+      <div class="day-chips" id="day-chips">
+        <span class="day-chip selected" data-day="Mon">Mon</span>
+        <span class="day-chip selected" data-day="Tue">Tue</span>
+        <span class="day-chip selected" data-day="Wed">Wed</span>
+        <span class="day-chip selected" data-day="Thu">Thu</span>
+        <span class="day-chip selected" data-day="Fri">Fri</span>
+        <span class="day-chip" data-day="Sat">Sat</span>
+        <span class="day-chip" data-day="Sun">Sun</span>
+      </div>
+    </div>
+  </div>
+  <div class="sub-actions">
+    <button id="sub-submit" onclick="submitSubscription()">Subscribe</button>
+    <span id="sub-msg"></span>
+  </div>
+
+  <div id="subs-list"></div>
 </div>
 
 <div id="messages"></div>
@@ -368,6 +486,96 @@
       addMsg('No saved history found for this session.', 'status');
     }
   });
+
+  // ── Subscribe panel ───────────────────────────────────────────────────────
+  function toggleSubPanel() {
+    const panel = document.getElementById('sub-panel');
+    const arrow = document.getElementById('sub-arrow');
+    const open = panel.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+    if (open) loadSubscriptions();
+  }
+
+  // Hour chips — single-select (only one hour-range active at a time)
+  document.querySelectorAll('#hour-chips .day-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#hour-chips .day-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+
+  // Day chips — multi-select
+  document.querySelectorAll('#day-chips .day-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+
+  function getSelectedHours() {
+    const active = document.querySelector('#hour-chips .day-chip.selected');
+    if (!active || active.dataset.hours === '') return [];
+    return active.dataset.hours.split(',').map(Number);
+  }
+
+  function getSelectedDays() {
+    return [...document.querySelectorAll('#day-chips .day-chip.selected')]
+      .map(c => c.dataset.day);
+  }
+
+  async function submitSubscription() {
+    const email = document.getElementById('sub-email').value.trim();
+    const msgEl = document.getElementById('sub-msg');
+    if (!email) { msgEl.className = 'error'; msgEl.textContent = 'Email is required.'; return; }
+
+    const payload = {
+      email,
+      route_suffix: 'LW',
+      min_delay_minutes: parseInt(document.getElementById('sub-delay').value),
+      notify_hours: getSelectedHours(),
+      notify_days: getSelectedDays(),
+    };
+
+    try {
+      const r = await fetch('/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      msgEl.className = '';
+      msgEl.textContent = `Subscribed! You will be notified at ${email}.`;
+      document.getElementById('sub-email').value = '';
+      loadSubscriptions();
+    } catch (err) {
+      msgEl.className = 'error';
+      msgEl.textContent = `Error: ${err.message}`;
+    }
+  }
+
+  async function loadSubscriptions() {
+    const listEl = document.getElementById('subs-list');
+    try {
+      const r = await fetch('/subscriptions');
+      const subs = await r.json();
+      if (!subs.length) { listEl.innerHTML = ''; return; }
+
+      const items = subs.map(s => {
+        const hours = s.notify_hours.length ? `${s.notify_hours[0]}–${s.notify_hours[s.notify_hours.length-1]}h` : 'all day';
+        const days = s.notify_days.length ? s.notify_days.join(', ') : 'every day';
+        return `<div class="sub-item">
+          <div>
+            <div class="sub-info">${s.email} &nbsp;·&nbsp; ${s.route_suffix} line &nbsp;·&nbsp; ≥${s.min_delay_minutes}min</div>
+            <div class="sub-meta">${hours} &nbsp;·&nbsp; ${days}</div>
+          </div>
+          <button class="sub-delete" onclick="deleteSub('${s.id}')">Remove</button>
+        </div>`;
+      }).join('');
+      listEl.innerHTML = `<h4>Active subscriptions (${subs.length})</h4>${items}`;
+    } catch { listEl.innerHTML = ''; }
+  }
+
+  async function deleteSub(id) {
+    await fetch(`/subscriptions/${id}`, { method: 'DELETE' });
+    loadSubscriptions();
+  }
 
   // ── Live-data toggle ──────────────────────────────────────────────────────
   const liveToggle = document.getElementById('live-toggle');

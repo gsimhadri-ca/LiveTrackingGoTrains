@@ -22,6 +22,8 @@ from pydantic import BaseModel
 from agent.agent import chat_stream, clear_history
 from agent import live_mode
 from config import WEB_HOST, WEB_PORT
+from subscriptions import store as sub_store
+from subscriptions.models import Subscription
 
 app = FastAPI(title="GO Transit Chat Agent", version="2.0")
 
@@ -37,6 +39,14 @@ class ChatRequest(BaseModel):
 
 class ConfigRequest(BaseModel):
     live_mode: bool
+
+
+class SubscribeRequest(BaseModel):
+    email: str
+    route_suffix: str = "LW"
+    min_delay_minutes: int = 5
+    notify_hours: list[int] = []
+    notify_days: list[str] = []
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -92,6 +102,26 @@ async def clear_history_endpoint(session_id: str):
     if clear_history(session_id):
         return {"cleared": session_id}
     raise HTTPException(status_code=404, detail="Session not found")
+
+
+# ── Subscriptions ─────────────────────────────────────────────────────────────
+
+@app.post("/subscriptions", status_code=201)
+async def create_subscription(req: SubscribeRequest):
+    sub = Subscription(**req.model_dump())
+    return sub_store.create(sub)
+
+
+@app.get("/subscriptions")
+async def list_subscriptions():
+    return sub_store.list_all()
+
+
+@app.delete("/subscriptions/{sub_id}")
+async def delete_subscription(sub_id: str):
+    if sub_store.delete(sub_id):
+        return {"deleted": sub_id}
+    raise HTTPException(status_code=404, detail="Subscription not found")
 
 
 # ── Dev runner ────────────────────────────────────────────────────────────────

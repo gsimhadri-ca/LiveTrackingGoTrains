@@ -23,20 +23,30 @@ log = structlog.get_logger(__name__)
 async def _handle_alert(alert: dict) -> None:
     """
     Process one alert event from the go.alerts topic.
-
-    Currently: structured log only.
-    Phase 3b hook: look up subscribers for alert["route_id"] and notify them.
+    Looks up matching subscriptions and dispatches notifications to each.
     """
+    route_id = alert.get("route_id", "")
+    delay_s = alert.get("current_delay_s", 0)
+    trip_id = alert.get("trip_id", "")
+
     log.warning(
         "KAFKA_ALERT_RECEIVED",
-        trip_id=alert.get("trip_id"),
-        route_id=alert.get("route_id"),
-        delay_s=alert.get("current_delay_s"),
+        trip_id=trip_id,
+        route_id=route_id,
+        delay_s=delay_s,
         delta_s=alert.get("delta_s"),
         trend=alert.get("trend"),
         message=alert.get("message"),
     )
-    # Phase 3b:  await subscriber_registry.notify(alert)
+
+    from subscriptions import store as sub_store
+    from subscriptions.notifier import notify
+
+    matching = sub_store.get_matching(route_id, delay_s)
+    if matching:
+        log.info("dispatching_to_subscribers", count=len(matching), trip_id=trip_id)
+        for sub in matching:
+            await notify(sub, alert)
 
 
 async def run_alert_consumer() -> None:

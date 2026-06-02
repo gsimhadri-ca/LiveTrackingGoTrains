@@ -18,7 +18,7 @@ from agent.tools import (
     get_next_service,
     get_service_exceptions,
 )
-from config import ANTHROPIC_API_KEY, AGENT_MODEL
+from config import AGENT_ENABLED, ANTHROPIC_API_KEY, AGENT_MODEL
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -44,13 +44,12 @@ Always call the relevant tool before answering delay or schedule questions — n
 Be concise and practical. If the user mentions their usual train or stop, remember it.\
 """
 
-_llm = ChatAnthropic(
-    model=AGENT_MODEL,
-    api_key=ANTHROPIC_API_KEY,
-    streaming=True,
-)
+_llm = None
+_agent = None
 
-_agent = create_agent(_llm, tools=_TOOLS, system_prompt=_SYSTEM_PROMPT)
+if AGENT_ENABLED and ANTHROPIC_API_KEY:
+    _llm = ChatAnthropic(model=AGENT_MODEL, api_key=ANTHROPIC_API_KEY, streaming=True)
+    _agent = create_agent(_llm, tools=_TOOLS, system_prompt=_SYSTEM_PROMPT)
 
 
 # ── JSON history helpers ───────────────────────────────────────────────────────
@@ -125,6 +124,16 @@ async def chat_stream(message: str, session_id: str = "default") -> AsyncIterato
       {"type": "answer",  "text": "..."}  — final answer
       {"type": "error",   "text": "..."}  — on failure
     """
+    if _agent is None:
+        yield {
+            "type": "answer",
+            "text": (
+                "The chat agent is currently disabled (AGENT_ENABLED=false). "
+                "Set AGENT_ENABLED=true in .env and restart the server to re-enable it."
+            ),
+        }
+        return
+
     history = load_history(session_id)
     messages = _build_messages(history, message)
 

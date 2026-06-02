@@ -5,6 +5,7 @@ structlog>=24.1
 python-dotenv>=1.0
 redis>=5.0
 aiokafka>=0.11
+aiosmtplib>=3.0
 
 # Phase 2 — LangChain agent + FastAPI chat server
 langchain>=0.3

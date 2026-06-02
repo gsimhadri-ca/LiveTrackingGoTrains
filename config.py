@@ -44,12 +44,21 @@ POLL_INTERVAL_SECONDS: int = int(os.getenv("POLL_INTERVAL_SECONDS", "30"))
 DELAY_THRESHOLD_SECONDS: int = int(os.getenv("DELAY_THRESHOLD_SECONDS", "300"))
 
 # ── Anthropic / LangChain agent (Phase 2) ─────────────────────────────────────
+AGENT_ENABLED: bool = os.getenv("AGENT_ENABLED", "true").lower() == "true"
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 AGENT_MODEL: str = os.getenv("AGENT_MODEL", "claude-sonnet-4-6")
 
 # ── Web server (Phase 2) ───────────────────────────────────────────────────────
 WEB_HOST: str = os.getenv("WEB_HOST", "127.0.0.1")
 WEB_PORT: int = int(os.getenv("WEB_PORT", "8000"))
+
+# ── Email / SMTP (Phase 3 — alert delivery) ──────────────────────────────────
+SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER: str = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM: str = os.getenv("SMTP_FROM", "alerts@gotransit.local")
+SMTP_ENABLED: bool = bool(SMTP_HOST)
 
 # ── Redis (Phase 3 — persistent state) ───────────────────────────────────────
 REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
