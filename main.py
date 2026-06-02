@@ -9,8 +9,15 @@ and shut down cleanly on exit.
 """
 import asyncio
 import logging
+import sys
 import structlog
 import httpx
+
+# Windows console defaults to cp1252 which can't encode structlog's arrow chars.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8")
 
 import config
 from ingestor.fetcher import fetch_all
