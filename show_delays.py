@@ -7,9 +7,15 @@ Usage:
 No loop — fetches once and exits.
 """
 import asyncio
+import sys
 import httpx
 import structlog
 import logging
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8")
 
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
