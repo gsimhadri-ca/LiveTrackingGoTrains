@@ -18,10 +18,13 @@ from ingestor.models import StopTimeUpdate
 log = structlog.get_logger(__name__)
 
 
-def _format_delay(seconds: int) -> str:
+def format_delay(seconds: int) -> str:
     minutes, secs = divmod(abs(seconds), 60)
     sign = "+" if seconds >= 0 else "-"
     return f"{sign}{minutes}m {secs:02d}s"
+
+
+_format_delay = format_delay  # internal alias kept for backward compat
 
 
 def _build_alert(

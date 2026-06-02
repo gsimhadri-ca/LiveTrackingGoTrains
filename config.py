@@ -54,5 +54,9 @@ WEB_PORT: int = int(os.getenv("WEB_PORT", "8000"))
 # ── Redis (Phase 3 — persistent state) ───────────────────────────────────────
 REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+# ── Kafka (Phase 3 — event streaming) ────────────────────────────────────────
+KAFKA_ENABLED: bool = os.getenv("KAFKA_ENABLED", "true").lower() == "true"
+KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()

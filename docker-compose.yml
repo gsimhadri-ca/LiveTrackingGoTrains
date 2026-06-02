@@ -1,0 +1,38 @@
+# Starts Redis + Kafka (KRaft — no Zookeeper needed).
+#
+# Usage:
+#   docker compose up -d          # start both services
+#   docker compose down           # stop and remove containers
+#   docker compose logs -f kafka  # tail Kafka logs
+#
+# Kafka broker is reachable at localhost:9092
+# Redis is reachable at localhost:6379
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: go-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: go-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft mode — single node acts as both broker and controller
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 24
+      CLUSTER_ID: go-transit-kafka-cluster-01
+    restart: unless-stopped

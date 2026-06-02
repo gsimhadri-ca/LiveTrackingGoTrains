@@ -1,7 +1,7 @@
 # LiveTrackingGoTrains — Implementation Progress
 
 **Last updated:** 2026-06-01  
-**Status:** Phase 2 complete. Phase 3 in progress — Redis persistent state done. `ANTHROPIC_API_KEY` set in `.env`.
+**Status:** Phase 2 complete. Phase 3 in progress — Redis state + Kafka streaming done. `ANTHROPIC_API_KEY` set in `.env`.
 
 ---
 
@@ -232,7 +232,7 @@ _ENABLED_CHANNELS = [
 | `NextService/OA` wired to Phase 1 alerts | 2 | Tool exists; not yet in alert message |
 | Vultr server deployment | 3 | No server configured yet; local only |
 | Persistent state (Redis/DB) | 3 | **DONE (2026-06-01)** — Redis-backed `orchestrator/state.py`; keys TTL 1hr; `REDIS_URL` in config |
-| Kafka integration | 3 | For high-throughput / multi-user scaling |
+| Kafka integration | 3 | **DONE (2026-06-01)** — `kafka/producer.py` + `kafka/consumer.py`; topics `go.trips.delays` + `go.alerts`; KRaft via `docker-compose.yml` |
 
 ---
 
